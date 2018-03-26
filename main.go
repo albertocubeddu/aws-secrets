@@ -15,13 +15,13 @@ func main() {
 
 	modulesArg := flag.String("modules", "database", "All the modules to import separated by a ',' e.g. database,elasticsearch")
 	strategyToUse := flag.String("output", "screen,file", "The various output method ['screen', 'file']")
-	//environmnetArg := flag.String("environment", "testing", "The environment that you want to call [production/testing/etc.]")
+	environmnetArg := flag.String("environment", "", "The environment that you want to call [production/testing/etc.]")
 	flag.Parse()
 
 	modules := strings.Split(*modulesArg, ",")
 	strategiesToUse := strings.Split(*strategyToUse, ",")
 	for _, value := range modules {
-		ExportVariables("/"+value+"/", "", container)
+		ExportVariables("/"+value+"/", *environmnetArg,"", container)
 	}
 
 	for _, value := range strategiesToUse {
@@ -43,13 +43,14 @@ func fakeFactoryOperator(strategyToUse string) Operator {
 	}
 }
 
-func ExportVariables(path string, nextToken string, container map[string]map[string]string) {
+func ExportVariables(path string, environment string, nextToken string, container map[string]map[string]string) {
 
 	session := session.Must(session.NewSession(&aws.Config{Region: aws.String("ap-southeast-2")}))
 	client := ssm.New(session)
 
+	pathToSearch := path + environment
 	input := &ssm.GetParametersByPathInput{
-		Path:           &path,
+		Path:           &pathToSearch,
 		WithDecryption: aws.Bool(true),
 		Recursive:      aws.Bool(true),
 	}
@@ -69,7 +70,7 @@ func ExportVariables(path string, nextToken string, container map[string]map[str
 	}
 
 	if output.NextToken != nil {
-		ExportVariables(path, *output.NextToken, container)
+		ExportVariables(path, environment, *output.NextToken, container)
 	}
 }
 
